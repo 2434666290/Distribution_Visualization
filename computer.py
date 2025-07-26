@@ -110,6 +110,24 @@ if 'fig_lavg' not in st.session_state:
     st.session_state.fig_lavg = None
 if 'threshold' not in st.session_state:
     st.session_state.threshold = None
+if 'p_s_gt_0' not in st.session_state:
+    st.session_state.p_s_gt_0 = None
+if 'p_s_lt_0' not in st.session_state:
+    st.session_state.p_s_lt_0 = None
+if 'mean_s_positive' not in st.session_state:
+    st.session_state.mean_s_positive = None
+if 'mean_s_negative' not in st.session_state:
+    st.session_state.mean_s_negative = None
+if 'p_lavg_gt_threshold' not in st.session_state:
+    st.session_state.p_lavg_gt_threshold = None
+if 'p_lavg_lt_threshold' not in st.session_state:
+    st.session_state.p_lavg_lt_threshold = None
+if 'mean_lavg_gt_threshold' not in st.session_state:
+    st.session_state.mean_lavg_gt_threshold = None
+if 'mean_lavg_lt_threshold' not in st.session_state:
+    st.session_state.mean_lavg_lt_threshold = None
+if 'num_trials' not in st.session_state:
+    st.session_state.num_trials = None
 
 # 显示按钮
 if st.button("生成分析结果"):
@@ -120,6 +138,7 @@ if st.button("生成分析结果"):
         st.session_state.s_values = s_values
         st.session_state.l_values = l_values
         st.session_state.results_computed = True
+        st.session_state.num_trials = num_trials
 
         # S的概率和平均值计算
         p_s_gt_0 = np.mean(s_values > 0)
@@ -134,26 +153,6 @@ if st.button("生成分析结果"):
         
         mean_s_positive = np.mean(s_positive) if len(s_positive) > 0 else 0
         mean_s_negative = np.mean(s_negative) if len(s_negative) > 0 else 0
-
-        # 显示S的统计结果
-        st.markdown("### 📊 S的统计结果")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**S的概率**")
-            st.write(f"**P(S > 0)** = `{p_s_gt_0:.6f}`")
-            st.write(f"**P(S < 0)** = `{p_s_lt_0:.6f}`")
-        
-        with col2:
-            st.markdown("**S的平均值**")
-            st.write(f"**E[S | S > 0]** = `{mean_s_positive:.6f}`")
-            st.write(f"**E[S | S < 0]** = `{mean_s_negative:.6f}`")
-
-        # 绘制S分布图
-        st.markdown("### 📈 S分布图")
-        fig_s = plot_s_distribution(s_values, bins, chart_type, n, num_trials, x_param)
-        st.pyplot(fig_s)
-        st.session_state.fig_s = fig_s
 
         # 计算lavg（只对S > 0的部分）
         if len(s_positive) > 0:
@@ -185,75 +184,51 @@ if st.button("生成分析结果"):
             mean_lavg_gt_threshold = np.mean(lavg_gt_threshold) if len(lavg_gt_threshold) > 0 else 0
             mean_lavg_lt_threshold = np.mean(lavg_lt_threshold) if len(lavg_lt_threshold) > 0 else 0
             
-            # 显示lavg的统计结果
-            st.markdown("### 📊 lavg的统计结果（当S > 0时）")
-            col3, col4 = st.columns(2)
-            
-            with col3:
-                st.markdown("**lavg的概率**")
-                st.write(f"**P(lavg > 0 | S > 0)** = `{1.0:.6f}`")
-                st.write(f"**P(lavg > {threshold:.3f} | S > 0)** = `{p_lavg_gt_threshold:.6f}`")
-                st.write(f"**P(lavg < {threshold:.3f} | S > 0)** = `{p_lavg_lt_threshold:.6f}`")
-            
-            with col4:
-                st.markdown("**lavg的平均值**")
-                st.write(f"**E[lavg | S > 0]** = `{np.mean(lavg_values):.6f}`")
-                st.write(f"**E[lavg | lavg > {threshold:.3f}]** = `{mean_lavg_gt_threshold:.6f}`")
-                st.write(f"**E[lavg | lavg < {threshold:.3f}]** = `{mean_lavg_lt_threshold:.6f}`")
-
-            # 绘制lavg分布图
-            st.markdown("### 📈 lavg分布图（当S > 0时）")
-            fig_lavg = plot_lavg_distribution(lavg_values, bins, chart_type, n, num_trials, x_param, threshold)
-            st.pyplot(fig_lavg)
-            st.session_state.fig_lavg = fig_lavg
+            # 保存统计结果到session state
+            st.session_state.p_s_gt_0 = p_s_gt_0
+            st.session_state.p_s_lt_0 = p_s_lt_0
+            st.session_state.mean_s_positive = mean_s_positive
+            st.session_state.mean_s_negative = mean_s_negative
+            st.session_state.p_lavg_gt_threshold = p_lavg_gt_threshold
+            st.session_state.p_lavg_lt_threshold = p_lavg_lt_threshold
+            st.session_state.mean_lavg_gt_threshold = mean_lavg_gt_threshold
+            st.session_state.mean_lavg_lt_threshold = mean_lavg_lt_threshold
 
         else:
             st.error("没有S > 0的样本，无法计算lavg")
+            # 保存统计结果到session state
+            st.session_state.p_s_gt_0 = p_s_gt_0
+            st.session_state.p_s_lt_0 = p_s_lt_0
+            st.session_state.mean_s_positive = mean_s_positive
+            st.session_state.mean_s_negative = mean_s_negative
 
-# 如果已经计算过结果，重新显示结果和下载区域
+# 如果已经计算过结果，显示结果和下载区域
 if st.session_state.results_computed:
-    # 重新显示S的统计结果
-    s_values = st.session_state.s_values
-    p_s_gt_0 = np.mean(s_values > 0)
-    p_s_lt_0 = np.mean(s_values < 0)
-    
-    s_positive = st.session_state.s_positive
-    s_negative = s_values[s_values < 0]
-    
-    mean_s_positive = np.mean(s_positive) if len(s_positive) > 0 else 0
-    mean_s_negative = np.mean(s_negative) if len(s_negative) > 0 else 0
-
+    # 显示S的统计结果
     st.markdown("### 📊 S的统计结果")
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("**S的概率**")
-        st.write(f"**P(S > 0)** = `{p_s_gt_0:.6f}`")
-        st.write(f"**P(S < 0)** = `{p_s_lt_0:.6f}`")
+        st.write(f"**P(S > 0)** = `{st.session_state.p_s_gt_0:.6f}`")
+        st.write(f"**P(S < 0)** = `{st.session_state.p_s_lt_0:.6f}`")
     
     with col2:
         st.markdown("**S的平均值**")
-        st.write(f"**E[S | S > 0]** = `{mean_s_positive:.6f}`")
-        st.write(f"**E[S | S < 0]** = `{mean_s_negative:.6f}`")
+        st.write(f"**E[S | S > 0]** = `{st.session_state.mean_s_positive:.6f}`")
+        st.write(f"**E[S | S < 0]** = `{st.session_state.mean_s_negative:.6f}`")
 
-    # 重新显示S分布图
+    # 生成并显示S分布图
     st.markdown("### 📈 S分布图")
-    if st.session_state.fig_s is not None:
-        st.pyplot(st.session_state.fig_s)
+    s_values = st.session_state.s_values
+    fig_s = plot_s_distribution(s_values, bins, chart_type, n, num_trials, x_param)
+    st.pyplot(fig_s)
+    st.session_state.fig_s = fig_s
 
-    # 重新显示lavg的统计结果和图表
+    # 显示lavg的统计结果和图表
     if st.session_state.s_positive is not None and len(st.session_state.s_positive) > 0:
         lavg_values = st.session_state.lavg_values
         threshold = st.session_state.threshold
-        
-        p_lavg_gt_threshold = np.mean(lavg_values > threshold)
-        p_lavg_lt_threshold = np.mean(lavg_values < threshold)
-        
-        lavg_gt_threshold = lavg_values[lavg_values > threshold]
-        lavg_lt_threshold = lavg_values[lavg_values < threshold]
-        
-        mean_lavg_gt_threshold = np.mean(lavg_gt_threshold) if len(lavg_gt_threshold) > 0 else 0
-        mean_lavg_lt_threshold = np.mean(lavg_lt_threshold) if len(lavg_lt_threshold) > 0 else 0
         
         st.markdown("### 📊 lavg的统计结果（当S > 0时）")
         col3, col4 = st.columns(2)
@@ -261,19 +236,20 @@ if st.session_state.results_computed:
         with col3:
             st.markdown("**lavg的概率**")
             st.write(f"**P(lavg > 0 | S > 0)** = `{1.0:.6f}`")
-            st.write(f"**P(lavg > {threshold:.3f} | S > 0)** = `{p_lavg_gt_threshold:.6f}`")
-            st.write(f"**P(lavg < {threshold:.3f} | S > 0)** = `{p_lavg_lt_threshold:.6f}`")
+            st.write(f"**P(lavg > {threshold:.3f} | S > 0)** = `{st.session_state.p_lavg_gt_threshold:.6f}`")
+            st.write(f"**P(lavg < {threshold:.3f} | S > 0)** = `{st.session_state.p_lavg_lt_threshold:.6f}`")
         
         with col4:
             st.markdown("**lavg的平均值**")
             st.write(f"**E[lavg | S > 0]** = `{np.mean(lavg_values):.6f}`")
-            st.write(f"**E[lavg | lavg > {threshold:.3f}]** = `{mean_lavg_gt_threshold:.6f}`")
-            st.write(f"**E[lavg | lavg < {threshold:.3f}]** = `{mean_lavg_lt_threshold:.6f}`")
+            st.write(f"**E[lavg | lavg > {threshold:.3f}]** = `{st.session_state.mean_lavg_gt_threshold:.6f}`")
+            st.write(f"**E[lavg | lavg < {threshold:.3f}]** = `{st.session_state.mean_lavg_lt_threshold:.6f}`")
 
-        # 重新显示lavg分布图
+        # 生成并显示lavg分布图
         st.markdown("### 📈 lavg分布图（当S > 0时）")
-        if st.session_state.fig_lavg is not None:
-            st.pyplot(st.session_state.fig_lavg)
+        fig_lavg = plot_lavg_distribution(lavg_values, bins, chart_type, n, num_trials, x_param, threshold)
+        st.pyplot(fig_lavg)
+        st.session_state.fig_lavg = fig_lavg
 
     # 显示下载区域
     st.markdown("---")
@@ -297,7 +273,7 @@ if st.session_state.results_computed:
         if st.session_state.s_values is not None and st.session_state.l_values is not None:
             # 导出每次采样的S值和对应的l值
             sample_data = []
-            for trial in range(num_trials):
+            for trial in range(st.session_state.num_trials):
                 l_trial = st.session_state.l_values[trial]
                 s_trial = st.session_state.s_values[trial]
                 row = {'trial': trial + 1, 'S_value': s_trial}
