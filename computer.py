@@ -1,9 +1,16 @@
 import streamlit as st
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # 设置后端为Agg，避免显示问题
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from io import BytesIO
+
+# 设置matplotlib样式
+plt.style.use('default')
+matplotlib.rcParams['figure.facecolor'] = 'white'
+matplotlib.rcParams['axes.facecolor'] = 'white'
 
 # 页面设置
 st.title("S = ∑l_i + ∑(l_i * l_{i+1}) Distribution Analysis")
@@ -70,45 +77,65 @@ def estimate_s_values(n, num_trials, x_param, seed=42):
 
 # 画图函数
 def plot_s_distribution(values, bins, chart_type, n, num_trials, x_param):
-    fig, ax = plt.subplots(figsize=(12, 6))
+    # 创建图形时明确设置背景色
+    fig, ax = plt.subplots(figsize=(12, 6), facecolor='white')
+    ax.set_facecolor('white')
     
     if chart_type == "直方图（柱状图）":
-        ax.hist(values, bins=bins, density=True, color='skyblue', edgecolor='black', alpha=0.7, label='Histogram')
+        ax.hist(values, bins=bins, density=True, color='#4CAF50', edgecolor='#2E7D32', alpha=0.8, label='Histogram')
     elif chart_type == "折线图（平滑点图）":
         counts, bin_edges = np.histogram(values, bins=bins, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        ax.plot(bin_centers, counts, color='blue', linewidth=2, label='Line')
+        ax.plot(bin_centers, counts, color='#2196F3', linewidth=3, label='Line', marker='o', markersize=4)
     elif chart_type == "密度曲线（KDE）":
-        sns.kdeplot(values, ax=ax, fill=True, color='purple', alpha=0.4, linewidth=2, label='KDE')
+        sns.kdeplot(values, ax=ax, fill=True, color='#9C27B0', alpha=0.6, linewidth=3, label='KDE')
 
-    ax.axvline(0, color='red', linestyle='--', label='S = 0')
-    ax.set_title(f"S distribution (x = {x_param:.3f})\nn = {n}, num_trials = {num_trials}")
-    ax.set_xlabel("S Value")
-    ax.set_ylabel("Probability Density")
-    ax.legend()
-    ax.grid(True)
+    ax.axvline(0, color='#F44336', linestyle='--', linewidth=2, label='S = 0')
+    ax.set_title(f"S distribution (x = {x_param:.3f})\nn = {n}, num_trials = {num_trials}", fontsize=14, fontweight='bold')
+    ax.set_xlabel("S Value", fontsize=12)
+    ax.set_ylabel("Probability Density", fontsize=12)
+    ax.legend(fontsize=11)
+    
+    # 设置更美观的样式
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_linewidth(1.5)
+    ax.spines['bottom'].set_linewidth(1.5)
 
+    # 确保图形背景是白色
+    fig.patch.set_facecolor('white')
+    
     return fig
 
 def plot_lavg_distribution(values, bins, chart_type, n, num_trials, x_param, threshold):
-    fig, ax = plt.subplots(figsize=(12, 6))
+    # 创建图形时明确设置背景色
+    fig, ax = plt.subplots(figsize=(12, 6), facecolor='white')
+    ax.set_facecolor('white')
     
     if chart_type == "直方图（柱状图）":
-        ax.hist(values, bins=bins, density=True, color='lightgreen', edgecolor='black', alpha=0.7, label='Histogram')
+        ax.hist(values, bins=bins, density=True, color='#FF9800', edgecolor='#E65100', alpha=0.8, label='Histogram')
     elif chart_type == "折线图（平滑点图）":
         counts, bin_edges = np.histogram(values, bins=bins, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        ax.plot(bin_centers, counts, color='green', linewidth=2, label='Line')
+        ax.plot(bin_centers, counts, color='#FF5722', linewidth=3, label='Line', marker='s', markersize=4)
     elif chart_type == "密度曲线（KDE）":
-        sns.kdeplot(values, ax=ax, fill=True, color='orange', alpha=0.4, linewidth=2, label='KDE')
+        sns.kdeplot(values, ax=ax, fill=True, color='#FF9800', alpha=0.6, linewidth=3, label='KDE')
 
-    ax.axvline(threshold, color='red', linestyle='--', label=f'lavg = {threshold:.3f} (1+x)')
-    ax.set_title(f"lavg distribution (x = {x_param:.3f}, S > 0)\nn = {n}, num_trials = {len(values)}")
-    ax.set_xlabel("lavg Value")
-    ax.set_ylabel("Probability Density")
-    ax.legend()
-    ax.grid(True)
+    ax.axvline(threshold, color='#F44336', linestyle='--', linewidth=2, label=f'lavg = {threshold:.3f} (1+x)')
+    ax.set_title(f"lavg distribution (x = {x_param:.3f}, S > 0)\nn = {n}, num_trials = {len(values)}", fontsize=14, fontweight='bold')
+    ax.set_xlabel("lavg Value", fontsize=12)
+    ax.set_ylabel("Probability Density", fontsize=12)
+    ax.legend(fontsize=11)
+    
+    # 设置更美观的样式
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_linewidth(1.5)
+    ax.spines['bottom'].set_linewidth(1.5)
 
+    # 确保图形背景是白色
+    fig.patch.set_facecolor('white')
+    
     return fig
 
 # 初始化session state
@@ -300,7 +327,8 @@ if st.session_state.results_computed:
                 download_fig_s = plot_s_distribution(s_values, bins, chart_type, n, num_trials, x_param)
                 
                 buf_s = BytesIO()
-                download_fig_s.savefig(buf_s, format="png", dpi=1200, bbox_inches="tight")
+                download_fig_s.savefig(buf_s, format="png", dpi=1200, bbox_inches="tight", 
+                                     facecolor='white', edgecolor='none')
                 buf_s.seek(0)
                 
                 st.download_button(
@@ -322,7 +350,8 @@ if st.session_state.results_computed:
                     download_fig_lavg = plot_lavg_distribution(lavg_values, bins, chart_type, n, num_trials, x_param, threshold)
                     
                     buf_lavg = BytesIO()
-                    download_fig_lavg.savefig(buf_lavg, format="png", dpi=1200, bbox_inches="tight")
+                    download_fig_lavg.savefig(buf_lavg, format="png", dpi=1200, bbox_inches="tight",
+                                            facecolor='white', edgecolor='none')
                     buf_lavg.seek(0)
                     
                     st.download_button(
