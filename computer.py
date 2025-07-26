@@ -10,7 +10,14 @@ st.title("S = ∑l_i + ∑(l_i * l_{i+1}) Distribution Analysis")
 
 # 输入参数
 n = st.number_input("输入 n（变量个数）", min_value=1, max_value=10000, value=3)
-num_trials = st.number_input("模拟次数（采点数）", min_value=1000, max_value=100000000, value=10000, step=1000)
+num_trials = st.number_input("模拟次数（采点数）", min_value=1000, max_value=10000000, value=10000, step=1000)
+
+# 添加采样次数警告
+if num_trials > 1000000:
+    st.warning("⚠️ 采样次数超过100万，可能导致性能问题。建议使用较小的采样次数。")
+elif num_trials > 500000:
+    st.info("ℹ️ 采样次数较大，计算可能需要较长时间，请耐心等待。")
+
 bins = st.slider("分桶数（bins）", min_value=10, max_value=1000, value=100)
 
 # 参数x设置
@@ -35,20 +42,31 @@ def generate_l_values(n, num_trials, x_param, seed=42):
 @st.cache_data
 def estimate_s_values(n, num_trials, x_param, seed=42):
     l_values = generate_l_values(n, num_trials, x_param, seed)
-    s_values = []
     
-    for trial in range(num_trials):
-        l = l_values[trial]
-        # 计算 ∑l_i
-        sum_l = np.sum(l)
-        # 计算 ∑(l_i * l_{i+1})，注意 l_{n+1} = l_1
-        l_shifted = np.roll(l, -1)
-        sum_prod = np.sum(l * l_shifted)
-        # 计算S
-        S = sum_l + sum_prod
-        s_values.append(S)
+    # 添加进度条
+    progress_bar = st.progress(0)
+    status_text = st.empty()
     
-    return np.array(s_values), l_values
+    # 使用向量化操作计算S值
+    # 计算 ∑l_i (对每行求和)
+    sum_l = np.sum(l_values, axis=1)
+    
+    # 计算 ∑(l_i * l_{i+1})，注意 l_{n+1} = l_1
+    l_shifted = np.roll(l_values, -1, axis=1)
+    sum_prod = np.sum(l_values * l_shifted, axis=1)
+    
+    # 计算S
+    s_values = sum_l + sum_prod
+    
+    # 更新进度条到100%
+    progress_bar.progress(1.0)
+    status_text.text(f"计算完成: {num_trials:,} 次采样")
+    
+    # 清除进度条
+    progress_bar.empty()
+    status_text.empty()
+    
+    return s_values, l_values
 
 # 画图函数
 def plot_s_distribution(values, bins, chart_type, n, num_trials, x_param):
@@ -202,9 +220,7 @@ if st.button("生成分析结果"):
             st.session_state.mean_s_positive = mean_s_positive
             st.session_state.mean_s_negative = mean_s_negative
 
-# 如果已经计算过结果，显示结果和下载区域
 if st.session_state.results_computed:
-    # 显示S的统计结果
     st.markdown("### 📊 S的统计结果")
     col1, col2 = st.columns(2)
     
@@ -218,14 +234,22 @@ if st.session_state.results_computed:
         st.write(f"**E[S | S > 0]** = `{st.session_state.mean_s_positive:.6f}`")
         st.write(f"**E[S | S < 0]** = `{st.session_state.mean_s_negative:.6f}`")
 
-    # 生成并显示S分布图
     st.markdown("### 📈 S分布图")
     s_values = st.session_state.s_values
-    fig_s = plot_s_distribution(s_values, bins, chart_type, n, num_trials, x_param)
-    st.pyplot(fig_s)
-    st.session_state.fig_s = fig_s
+    
+    if (st.session_state.fig_s is None or 
+        'current_bins' not in st.session_state or 
+        st.session_state.current_bins != bins or
+        'current_chart_type' not in st.session_state or
+        st.session_state.current_chart_type != chart_type):
+        
+        fig_s = plot_s_distribution(s_values, bins, chart_type, n, num_trials, x_param)
+        st.session_state.fig_s = fig_s
+        st.session_state.current_bins = bins
+        st.session_state.current_chart_type = chart_type
+    
+    st.pyplot(st.session_state.fig_s)
 
-    # 显示lavg的统计结果和图表
     if st.session_state.s_positive is not None and len(st.session_state.s_positive) > 0:
         lavg_values = st.session_state.lavg_values
         threshold = st.session_state.threshold
@@ -247,84 +271,69 @@ if st.session_state.results_computed:
 
         # 生成并显示lavg分布图
         st.markdown("### 📈 lavg分布图（当S > 0时）")
-        fig_lavg = plot_lavg_distribution(lavg_values, bins, chart_type, n, num_trials, x_param, threshold)
-        st.pyplot(fig_lavg)
-        st.session_state.fig_lavg = fig_lavg
+        
+        # 检查是否需要重新生成图表
+        if (st.session_state.fig_lavg is None or 
+            'current_bins' not in st.session_state or 
+            st.session_state.current_bins != bins or
+            'current_chart_type' not in st.session_state or
+            st.session_state.current_chart_type != chart_type):
+            
+            fig_lavg = plot_lavg_distribution(lavg_values, bins, chart_type, n, num_trials, x_param, threshold)
+            st.session_state.fig_lavg = fig_lavg
+        
+        st.pyplot(st.session_state.fig_lavg)
 
-    # 显示下载区域
+        # 显示下载区域
     st.markdown("---")
-    st.markdown("### 📥 下载结果")
+    st.markdown("### 📥 下载图片")
     
     # 创建下载列
-    col_download1, col_download2, col_download3, col_download4 = st.columns(4)
+    col_download1, col_download2 = st.columns(2)
     
     with col_download1:
         if st.session_state.fig_s is not None:
-            buf_s = BytesIO()
-            st.session_state.fig_s.savefig(buf_s, format="png", dpi=1200, bbox_inches="tight")
-            st.download_button(
-                label="下载S分布图（PNG）",
-                data=buf_s.getvalue(),
-                file_name=f"s_distribution_n{n}_x{x_param:.3f}_{chart_type}.png",
-                mime="image/png"
-            )
-    
-    with col_download2:
-        if st.session_state.s_values is not None and st.session_state.l_values is not None:
-            # 导出每次采样的S值和对应的l值
-            sample_data = []
-            for trial in range(st.session_state.num_trials):
-                l_trial = st.session_state.l_values[trial]
-                s_trial = st.session_state.s_values[trial]
-                row = {'trial': trial + 1, 'S_value': s_trial}
-                # 添加每个l_i的值
-                for i in range(n):
-                    row[f'l_{i+1}'] = l_trial[i]
-                sample_data.append(row)
-            
-            sample_df = pd.DataFrame(sample_data)
-            csv_sample = sample_df.to_csv(index=False)
-            st.download_button(
-                label="下载每次采样数据（CSV）",
-                data=csv_sample,
-                file_name=f"sample_data_n{n}_x{x_param:.3f}.csv",
-                mime="text/csv"
-            )
+            # 使用更稳定的下载方式
+            try:
+                # 重新生成图表用于下载，避免影响显示
+                s_values = st.session_state.s_values
+                download_fig_s = plot_s_distribution(s_values, bins, chart_type, n, num_trials, x_param)
+                
+                buf_s = BytesIO()
+                download_fig_s.savefig(buf_s, format="png", dpi=1200, bbox_inches="tight")
+                buf_s.seek(0)
+                
+                st.download_button(
+                    label="下载S分布图（PNG）",
+                    data=buf_s.getvalue(),
+                    file_name=f"s_distribution_n{n}_x{x_param:.3f}_{chart_type}.png",
+                    mime="image/png",
+                    key="download_s_fig"  # 添加唯一key
+                )
+            except Exception as e:
+                st.error(f"下载S分布图时出错：{str(e)}")
     
     if st.session_state.s_positive is not None and len(st.session_state.s_positive) > 0:
-        with col_download3:
+        with col_download2:
             if st.session_state.fig_lavg is not None:
-                buf_lavg = BytesIO()
-                st.session_state.fig_lavg.savefig(buf_lavg, format="png", dpi=1200, bbox_inches="tight")
-                st.download_button(
-                    label="下载lavg分布图（PNG）",
-                    data=buf_lavg.getvalue(),
-                    file_name=f"lavg_distribution_n{n}_x{x_param:.3f}_{chart_type}.png",
-                    mime="image/png"
-                )
-        
-        with col_download4:
-            if st.session_state.lavg_values is not None:
-                # 导出S>0对应的lavg值
-                lavg_sample_data = []
-                for i, s_val in enumerate(st.session_state.s_positive):
-                    lavg_val = st.session_state.lavg_values[i]
-                    row = {
-                        'trial_index': i + 1,  # 在S>0样本中的索引
-                        'S_positive_value': s_val,
-                        'lavg_value': lavg_val,
-                        'lavg_gt_threshold': lavg_val > st.session_state.threshold
-                    }
-                    lavg_sample_data.append(row)
-                
-                lavg_sample_df = pd.DataFrame(lavg_sample_data)
-                csv_lavg_sample = lavg_sample_df.to_csv(index=False)
-                st.download_button(
-                    label="下载lavg采样数据（CSV）",
-                    data=csv_lavg_sample,
-                    file_name=f"lavg_sample_data_n{n}_x{x_param:.3f}.csv",
-                    mime="text/csv"
-                )
+                try:
+                    lavg_values = st.session_state.lavg_values
+                    threshold = st.session_state.threshold
+                    download_fig_lavg = plot_lavg_distribution(lavg_values, bins, chart_type, n, num_trials, x_param, threshold)
+                    
+                    buf_lavg = BytesIO()
+                    download_fig_lavg.savefig(buf_lavg, format="png", dpi=1200, bbox_inches="tight")
+                    buf_lavg.seek(0)
+                    
+                    st.download_button(
+                        label="下载lavg分布图（PNG）",
+                        data=buf_lavg.getvalue(),
+                        file_name=f"lavg_distribution_n{n}_x{x_param:.3f}_{chart_type}.png",
+                        mime="image/png",
+                        key="download_lavg_fig"  # 添加唯一key
+                    )
+                except Exception as e:
+                    st.error(f"下载lavg分布图时出错：{str(e)}")
 
 # 显示公式说明
 st.markdown("---")
