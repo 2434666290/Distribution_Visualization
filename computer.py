@@ -12,6 +12,14 @@ plt.style.use('default')
 matplotlib.rcParams['figure.facecolor'] = 'white'
 matplotlib.rcParams['axes.facecolor'] = 'white'
 
+# 设置字体大小
+matplotlib.rcParams['font.size'] = 12
+matplotlib.rcParams['axes.titlesize'] = 16
+matplotlib.rcParams['axes.labelsize'] = 14
+matplotlib.rcParams['xtick.labelsize'] = 12
+matplotlib.rcParams['ytick.labelsize'] = 12
+matplotlib.rcParams['legend.fontsize'] = 12
+
 # 页面设置
 st.title("S = ∑l_i + ∑(l_i * l_{i+1}) Distribution Analysis")
 
@@ -46,7 +54,6 @@ def generate_l_values(n, num_trials, x_param, seed=42):
     return np.random.uniform(-1-x_param, 1+x_param, (num_trials, n))
 
 # 计算S值的函数
-@st.cache_data
 def estimate_s_values(n, num_trials, x_param, seed=42):
     l_values = generate_l_values(n, num_trials, x_param, seed)
     
@@ -77,7 +84,6 @@ def estimate_s_values(n, num_trials, x_param, seed=42):
 
 # 画图函数
 def plot_s_distribution(values, bins, chart_type, n, num_trials, x_param):
-    # 创建图形时明确设置背景色
     fig, ax = plt.subplots(figsize=(12, 6), facecolor='white')
     ax.set_facecolor('white')
     
@@ -86,20 +92,22 @@ def plot_s_distribution(values, bins, chart_type, n, num_trials, x_param):
     elif chart_type == "折线图（平滑点图）":
         counts, bin_edges = np.histogram(values, bins=bins, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        ax.plot(bin_centers, counts, color='blue', linewidth=2, label='Line')
+        ax.plot(bin_centers, counts, color='blue', linewidth=3.0, label='Line')
     elif chart_type == "密度曲线（KDE）":
         sns.kdeplot(values, ax=ax, fill=True, color='purple', alpha=0.4, linewidth=2, label='KDE')
 
-    ax.axvline(0, color='red', linestyle='--', label='S = 0')
-    ax.set_title(f"S distribution (x = {x_param:.3f})\nn = {n}, num_trials = {num_trials}")
-    ax.set_xlabel("S Value")
-    ax.set_ylabel("Probability Density")
-    ax.legend()
+    ax.axvline(0, color='red', linestyle='--', linewidth=3.0, label='S = 0')
+    ax.set_title(f"S distribution (x = {x_param:.3f})\nn = {n}, num_trials = {num_trials}", fontsize=16, pad=20)
+    ax.set_xlabel("S value", fontsize=32)
+    ax.set_ylabel("Probability density", fontsize=32)
+    
+    # 设置刻度标签字体大小和刻度线粗细
+    ax.tick_params(axis='both', which='major', labelsize=28, width=3.0, length=10)
 
     fig.patch.set_facecolor('white')
     for spine in ax.spines.values():
         spine.set_edgecolor('black')
-        spine.set_linewidth(1.5)
+        spine.set_linewidth(3.0) # 设置边框宽度
     return fig
 
 def plot_lavg_distribution(values, bins, chart_type, n, num_trials, x_param, threshold):
@@ -111,22 +119,24 @@ def plot_lavg_distribution(values, bins, chart_type, n, num_trials, x_param, thr
     elif chart_type == "折线图（平滑点图）":
         counts, bin_edges = np.histogram(values, bins=bins, density=True)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        ax.plot(bin_centers, counts, color='green', linewidth=2, label='Line')
+        ax.plot(bin_centers, counts, color='green', linewidth=3.0, label='Line')
     elif chart_type == "密度曲线（KDE）":
         sns.kdeplot(values, ax=ax, fill=True, color='orange', alpha=0.4, linewidth=2, label='KDE')
 
-    ax.axvline(threshold, color='red', linestyle='--', label=f'lavg = {threshold:.3f} (1+x)')
-    ax.set_title(f"lavg distribution (x = {x_param:.3f}, S > 0)\nn = {n}, num_trials = {len(values)}")
-    ax.set_xlabel("lavg Value")
-    ax.set_ylabel("Probability Density")
-    ax.legend()
+    ax.axvline(threshold, color='red', linestyle='--', linewidth=3.0, label=f'lavg = {threshold:.3f} (1+x)')
+    ax.set_title(f"lavg distribution (x = {x_param:.3f}, S > 0)\nn = {n}, num_trials = {len(values)}", fontsize=16, pad=20)
+    ax.set_xlabel("lavg value", fontsize=32)
+    ax.set_ylabel("Probability density", fontsize=32)
+    
+    # 设置刻度标签字体大小和刻度线粗细
+    ax.tick_params(axis='both', which='major', labelsize=28, width=3.0, length=10)
 
     # 确保图形背景是白色
     fig.patch.set_facecolor('white')
     # 添加黑色边框
     for spine in ax.spines.values():
         spine.set_edgecolor('black')
-        spine.set_linewidth(1.5)
+        spine.set_linewidth(3.0)
     return fig
 
 # 初始化session state
